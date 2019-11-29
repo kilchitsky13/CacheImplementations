@@ -1,0 +1,155 @@
+﻿using System;
+using System.Diagnostics;
+using System.IO;
+using System.Reflection;
+using System.Threading;
+using System.Threading.Tasks;
+using CacheExample.Factories;
+using CacheExample.Interfaces;
+using CacheExample.Models;
+using CacheExample.Services;
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Configuration;
+using Serilog;
+using Serilog.Events;
+
+namespace CacheExample
+{
+    public class Program
+    {
+        public static IServiceProvider ServiceProvider { get; set; }
+        static void Main(string[] args)
+        {
+            var config = GetIConfigurationRoot();
+
+            Log.Logger = new LoggerConfiguration()
+                .WriteTo
+                .Console(LogEventLevel.Information)
+                .CreateLogger();
+
+            var tests = new CacheTests();
+            var memoryCache = new MemoryCache(new MemoryCacheOptions());
+            tests.ReadWriteIntoCache(config);
+            //tests.ReadWriteIntoInMemoryCache(memoryCache, config);
+            //tests.ReadWriteIntoDistributedCache(config);
+            Console.ReadKey();
+        }
+
+        #region Private
+
+        private static IConfigurationRoot GetIConfigurationRoot()
+        {
+            var directoryPath = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+            return new ConfigurationBuilder()
+                .SetBasePath(directoryPath)
+                .AddJsonFile("appsettings.json", optional: true)
+                .Build();
+        }
+
+        #endregion
+    }
+
+    public class CacheTests
+    {
+        #region AppCache
+
+        public void ReadWriteIntoCache(IConfigurationRoot configuration)
+        {
+            ICacheService<string, UserForCaching> cache = new ApplicationCacheService<UserForCaching>();
+            ThreadSafeTest(cache);
+        }
+
+        #endregion
+
+
+        #region InMemoryCache
+
+        public void ReadWriteIntoInMemoryCache(IMemoryCache memoryCache, IConfigurationRoot configuration)
+        {
+            ICacheService<string, UserForCaching> cache = new InMemoryCacheService<UserForCaching>(memoryCache, configuration);
+            ThreadSafeTest(cache);
+        }
+
+        #endregion
+
+        #region DistributedCache
+
+        public void ReadWriteIntoDistributedCache(IConfigurationRoot configuration)
+        {
+            ICacheService<string, UserForCaching> cache = new DistributedCacheService<UserForCaching>(configuration);
+            ThreadSafeTest(cache);
+        }
+
+        #endregion
+
+
+        #region Private
+
+        public void ThreadSafeTest(ICacheService<string, UserForCaching> cacheService)
+        {
+            for (var i = 0; i < 10; i++)
+            {
+                var model = CachingModelsFactory.CreateFakeUser();
+                model.Id = $"{i}.{model.Id}";
+                Task.Run(() => ReadWriteIntoFromCache(cacheService, model));
+            }
+        }
+
+        private void ReadWriteIntoFromCache(ICacheService<string, UserForCaching> cacheService, UserForCaching model)
+        {
+            //Writing
+            Log.Information("Writing model with id:{0}", model.Id);
+            var sw = Stopwatch.StartNew();
+            var addResult = cacheService.TryAdd(model.Id, model);
+            sw.Stop();
+
+            if (!addResult.IsSuccess)
+            {
+                Log.Error(addResult.ErrorMessage);
+                return;
+            }
+            Log.Information("Model with id: {0}, wrote. Time taken: {1}ms", model.Id, sw.Elapsed.TotalMilliseconds);
+
+
+            //Reading
+            Log.Information("Reading model with id:{0}", model.Id);
+
+            sw = Stopwatch.StartNew();
+            var getResult = cacheService.TryGet(model.Id);
+            sw.Stop();
+
+            if (!getResult.IsSuccess)
+            {
+                Log.Error(getResult.ErrorMessage);
+                return;
+            }
+            Log.Information("Got model with id: {0}. Got time taken: {1}ms", model.Id, sw.Elapsed.TotalMilliseconds);
+
+
+            //Reriding
+            Log.Information("Waiting...");
+            Thread.Sleep(TimeSpan.FromSeconds(10));
+            sw = Stopwatch.StartNew();
+            getResult = cacheService.TryGet(model.Id);
+            sw.Stop();
+
+            if (getResult.IsSuccess)
+            {
+                Log.Information("Got model with id: {0}. Time taken: {1}ms", model.Id, sw.Elapsed.TotalMilliseconds);
+            }
+            else
+            {
+                Log.Information("Entry with KEY: {0}, EXPIRED. Time taken: {1}ms", model.Id, sw.Elapsed.TotalMilliseconds);
+            }
+
+
+
+
+            //Removing
+
+
+        }
+        #endregion
+
+    }
+}
