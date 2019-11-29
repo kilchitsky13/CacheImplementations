@@ -5,14 +5,14 @@ using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Serilog;
 
-namespace CacheExample.Services
+namespace CacheExample.Managers
 {
-    public class InMemoryCacheService<TValue> : ICacheService<string, TValue> where TValue : new()
+    public class InMemoryCacheManager<TValue> : ICacheManager<string, TValue> where TValue : new()
     {
         private readonly IMemoryCache _memoryCache;
         private readonly MemoryCacheEntryOptions _memoryCacheEntryOptions;
 
-        public InMemoryCacheService(IMemoryCache memoryCache, IConfigurationRoot configuration)
+        public InMemoryCacheManager(IMemoryCache memoryCache, IConfigurationRoot configuration)
         {
             _memoryCache = memoryCache;
 

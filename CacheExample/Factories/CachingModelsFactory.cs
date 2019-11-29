@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using CacheExample.Models;
+﻿using CacheExample.Models;
 
 namespace CacheExample.Factories
 {
@@ -15,6 +12,7 @@ namespace CacheExample.Factories
                 FirstName = Faker.Name.First(),
                 LastName = Faker.Name.Last(),
                 City = Faker.Address.City(),
+
                 Id = Faker.Identification.UKNationalInsuranceNumber()
             };
         }

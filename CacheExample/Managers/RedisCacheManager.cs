@@ -7,13 +7,13 @@ using Microsoft.Extensions.Configuration;
 using Serilog;
 using StackExchange.Redis;
 
-namespace CacheExample.Services
+namespace CacheExample.Managers
 {
-    public class DistributedCacheService<TValue> : ICacheService<string, TValue>, IDisposable where TValue : new()
+    public class RedisCacheManager<TValue> : ICacheManager<string, TValue>, IDisposable where TValue : new()
     {
         private readonly ConnectionMultiplexer _connectionMultiplexer;
 
-        public DistributedCacheService(IConfigurationRoot config)
+        public RedisCacheManager(IConfigurationRoot config)
         {
             var conOptions = ConnectionMultiplexerConfigs.CreateConfigs(config);
             _connectionMultiplexer = ConnectionMultiplexer.Connect(conOptions.Value);
@@ -33,7 +33,6 @@ namespace CacheExample.Services
             }
             catch (RedisConnectionException rcex)
             {
-                ConnectionMultiplexerConfigs.SetUnHealthy();
                 Log.Error($"Could not connect to redis:{rcex.Message}");
                 return new CacheResult<TValue>(rcex);
             }
@@ -57,7 +56,6 @@ namespace CacheExample.Services
             }
             catch (RedisConnectionException rcex)
             {
-                ConnectionMultiplexerConfigs.SetUnHealthy();
                 Log.Error($"Could not connect to redis:{rcex.Message}");
                 return new CacheResult(rcex);
             }
@@ -78,7 +76,6 @@ namespace CacheExample.Services
             }
             catch (RedisConnectionException rcex)
             {
-                ConnectionMultiplexerConfigs.SetUnHealthy();
                 Log.Error($"Could not connect to redis:{rcex.Message}");
                 return new CacheResult(rcex);
             }

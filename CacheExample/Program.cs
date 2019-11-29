@@ -6,8 +6,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using CacheExample.Factories;
 using CacheExample.Interfaces;
+using CacheExample.Managers;
 using CacheExample.Models;
-using CacheExample.Services;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Serilog;
@@ -29,9 +29,11 @@ namespace CacheExample
 
             var tests = new CacheTests();
             var memoryCache = new MemoryCache(new MemoryCacheOptions());
-            tests.ReadWriteIntoCache(config);
+
+            //tests.ReadWriteIntoCache(config);
             //tests.ReadWriteIntoInMemoryCache(memoryCache, config);
-            //tests.ReadWriteIntoDistributedCache(config);
+            tests.ReadWriteIntoDistributedCache(config);
+            
             Console.ReadKey();
         }
 
@@ -55,19 +57,18 @@ namespace CacheExample
 
         public void ReadWriteIntoCache(IConfigurationRoot configuration)
         {
-            ICacheService<string, UserForCaching> cache = new ApplicationCacheService<UserForCaching>();
-            ThreadSafeTest(cache);
+            ICacheManager<string, UserForCaching> cache = new ApplicationCacheManager<UserForCaching>();
+            RunTest(cache);
         }
 
         #endregion
-
 
         #region InMemoryCache
 
         public void ReadWriteIntoInMemoryCache(IMemoryCache memoryCache, IConfigurationRoot configuration)
         {
-            ICacheService<string, UserForCaching> cache = new InMemoryCacheService<UserForCaching>(memoryCache, configuration);
-            ThreadSafeTest(cache);
+            ICacheManager<string, UserForCaching> cache = new InMemoryCacheManager<UserForCaching>(memoryCache, configuration);
+            RunTest(cache);
         }
 
         #endregion
@@ -76,26 +77,25 @@ namespace CacheExample
 
         public void ReadWriteIntoDistributedCache(IConfigurationRoot configuration)
         {
-            ICacheService<string, UserForCaching> cache = new DistributedCacheService<UserForCaching>(configuration);
-            ThreadSafeTest(cache);
+            ICacheManager<string, UserForCaching> cache = new RedisCacheManager<UserForCaching>(configuration);
+            RunTest(cache);
         }
 
         #endregion
-
-
+        
         #region Private
 
-        public void ThreadSafeTest(ICacheService<string, UserForCaching> cacheService)
+        public void RunTest(ICacheManager<string, UserForCaching> cacheService)
         {
-            for (var i = 0; i < 10; i++)
-            {
-                var model = CachingModelsFactory.CreateFakeUser();
-                model.Id = $"{i}.{model.Id}";
-                Task.Run(() => ReadWriteIntoFromCache(cacheService, model));
-            }
+            var prefix = cacheService.GetType().Name;
+
+            var model = CachingModelsFactory.CreateFakeUser();
+            model.Id = $"{prefix}.{model.Id}";
+
+            Task.Run(() => ReadWriteIntoFromCache(cacheService, model));
         }
 
-        private void ReadWriteIntoFromCache(ICacheService<string, UserForCaching> cacheService, UserForCaching model)
+        private void ReadWriteIntoFromCache(ICacheManager<string, UserForCaching> cacheService, UserForCaching model)
         {
             //Writing
             Log.Information("Writing model with id:{0}", model.Id);
@@ -108,7 +108,7 @@ namespace CacheExample
                 Log.Error(addResult.ErrorMessage);
                 return;
             }
-            Log.Information("Model with id: {0}, wrote. Time taken: {1}ms", model.Id, sw.Elapsed.TotalMilliseconds);
+            Log.Information("Model with id: {0}, wrote. Time taken: {1} ms", model.Id, sw.Elapsed.TotalMilliseconds);
 
 
             //Reading
@@ -123,7 +123,7 @@ namespace CacheExample
                 Log.Error(getResult.ErrorMessage);
                 return;
             }
-            Log.Information("Got model with id: {0}. Got time taken: {1}ms", model.Id, sw.Elapsed.TotalMilliseconds);
+            Log.Information("Got model with id: {0}. Got time taken: {1} ms", model.Id, sw.Elapsed.TotalMilliseconds);
 
 
             //Reriding
@@ -135,19 +135,23 @@ namespace CacheExample
 
             if (getResult.IsSuccess)
             {
-                Log.Information("Got model with id: {0}. Time taken: {1}ms", model.Id, sw.Elapsed.TotalMilliseconds);
+                Log.Information("Got model with id: {0}. Time taken: {1} ms", model.Id, sw.Elapsed.TotalMilliseconds);
             }
             else
             {
-                Log.Information("Entry with KEY: {0}, EXPIRED. Time taken: {1}ms", model.Id, sw.Elapsed.TotalMilliseconds);
+                Log.Information("Entry with KEY: {0}, EXPIRED. Time taken: {1} ms", model.Id, sw.Elapsed.TotalMilliseconds);
+                return;
             }
-
-
 
 
             //Removing
 
-
+            Log.Information("Removing...");
+            sw = Stopwatch.StartNew();
+            var removeResult = cacheService.TryRemove(model.Id);
+            sw.Stop();
+            
+            Log.Information("Remove model with id: {0}. Time taken: {1} ms", model.Id, sw.Elapsed.TotalMilliseconds);
         }
         #endregion
 

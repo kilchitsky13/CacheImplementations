@@ -4,12 +4,12 @@ using CacheExample.Interfaces;
 using CacheExample.Models;
 using Serilog;
 
-namespace CacheExample.Services
+namespace CacheExample.Managers
 {
-    public class ApplicationCacheService<TValue> : ICacheService<string, TValue> where TValue : new()
+    public class ApplicationCacheManager<TValue> : ICacheManager<string, TValue> where TValue : new()
     {
         private readonly Dictionary<string, TValue> _cache = new Dictionary<string, TValue>();
-        public ApplicationCacheService()
+        public ApplicationCacheManager()
         {
         }
 

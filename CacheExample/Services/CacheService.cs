@@ -1,31 +1,31 @@
 ﻿using System;
 using System.Threading.Tasks;
-using CacheExample.Examples;
 using CacheExample.Extensions;
 using CacheExample.Interfaces;
+using CacheExample.Managers;
 using CacheExample.Models;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 
-namespace CacheExample.Managers
+namespace CacheExample.Services
 {
-    public class CacheManager<TModel> where TModel : class
+    public class CacheService<TModel> where TModel : new()
     {
-        private readonly DistributedCache<TModel> _redisCacheManager;
-        private readonly InMemoryCache<TModel> _inMemoryCache;
+        private readonly RedisCacheManager<TModel> _redisCacheManager;
+        private readonly InMemoryCacheManager<TModel> _inMemoryCache;
 
-        public CacheManager(IMemoryCache memoryCache, IConfigurationRoot configuration)
+        public CacheService(IMemoryCache memoryCache, IConfigurationRoot configuration)
         {
             if (bool.TryParse(configuration["RedisCache:Enabled"], out var redisCacheEnabled) &&
                 redisCacheEnabled)
             {
-                _redisCacheManager = new DistributedCache<TModel>(configuration);
+                _redisCacheManager = new RedisCacheManager<TModel>(configuration);
             }
 
             if (bool.TryParse(configuration["InMemoryCache:Enabled"], out var inMemoryCacheEnabled) &&
                 inMemoryCacheEnabled)
             {
-                _inMemoryCache = new InMemoryCache<TModel>(memoryCache, configuration);
+                _inMemoryCache = new InMemoryCacheManager<TModel>(memoryCache, configuration);
             }
         }
 
@@ -42,7 +42,7 @@ namespace CacheExample.Managers
             var resaltSearchInDB = await func(parameter);
             if (resaltSearchInDB != null)
             {
-                await AddModelToCache(key, resaltSearchInDB);
+                AddModelToCache(key, resaltSearchInDB);
                 return new CacheResult<TModel>(resaltSearchInDB);
             }
             return new CacheResult<TModel>("ItemDoesNotExist");
@@ -65,7 +65,7 @@ namespace CacheExample.Managers
 
             if (_redisCacheManager != null)
             {
-                var resaltSearchInRedisCache = await _redisCacheManager.TryGet(key);
+                var resaltSearchInRedisCache =  _redisCacheManager.TryGet(key);
                 if (resaltSearchInRedisCache.IsSuccess)
                 {
                     _inMemoryCache?.TryAdd(key, resaltSearchInRedisCache.Data);
@@ -75,14 +75,14 @@ namespace CacheExample.Managers
             return new CacheResult<TModel>("ItemDoesNotExist");
         }
 
-        private async Task AddModelToCache(string key, TModel model)
+        private async void AddModelToCache(string key, TModel model)
         {
             if (model != null)
             {
                 _inMemoryCache?.TryAdd(key, model);
 
                 if (_redisCacheManager != null)
-                    await _redisCacheManager.TryAdd(key, model);
+                    _redisCacheManager.TryAdd(key, model);
             }
         }
 

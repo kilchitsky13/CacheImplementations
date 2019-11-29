@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
-using System.Threading.Tasks;
-using CacheExample.Enums;
 using Microsoft.Extensions.Configuration;
 using StackExchange.Redis;
 
@@ -10,20 +8,10 @@ namespace CacheExample.Configuration
 {
     public static class ConnectionMultiplexerConfigs
     {
-        public static RedisCacheHealthStatus Health { get; private set; }
-
-        public static long LastUnhealthTime { get; private set; }
-
         public static int AbsoluteExpirationRelativeToNow = 5;
-        private static int _healthCheckTimeDelay = 30;
 
         public static Lazy<ConfigurationOptions> CreateConfigs(IConfigurationRoot configuration)
         {
-            if (int.TryParse(configuration["RedisCache:HealthCheckTimeDelay"], out var healthCheckTime))
-            {
-                _healthCheckTimeDelay = healthCheckTime;
-            }
-
             var configOptions = CreateLazyConfigurationOptions(configuration);
             configOptions.Value.AllowAdmin = true;
 
@@ -34,26 +22,6 @@ namespace CacheExample.Configuration
 
             return configOptions;
         }
-
-        public static void SetUnHealthy()
-        {
-            Health = RedisCacheHealthStatus.Unhealth;
-            Task.Delay(TimeSpan.FromSeconds(_healthCheckTimeDelay))
-                        .ContinueWith(t =>
-                        {
-                            Health = RedisCacheHealthStatus.Non;
-                        });
-        }
-
-        public static void SetHealthy()
-        {
-            if (Health != RedisCacheHealthStatus.Health)
-            {
-                LastUnhealthTime = (long)(DateTime.UtcNow - new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc)).TotalMilliseconds;
-                Health = RedisCacheHealthStatus.Health;
-            }
-        }
-
 
         #region Private
 
