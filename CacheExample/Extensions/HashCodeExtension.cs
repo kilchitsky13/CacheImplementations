@@ -13,9 +13,7 @@ namespace CacheExample.Extensions
 
         public static string GetBodyHashCode<TIn, TOut>(this Func<TIn, TOut> predicate)
         {
-            return Encoding.UTF8.GetBytes(predicate.Target.ToString()).ToHex(false) + "_" +
-                   predicate.Method.GetMethodBody().GetILAsByteArray().ToHex(false) + "_" +
-                   Encoding.UTF8.GetBytes(JsonHelper.Serialize(predicate.Target)).ToHex(false);
+            return predicate.Method.GetMethodBody()?.GetILAsByteArray().ToHex(false);
         }
 
         private static string ToHex(this byte[] bytes, bool upperCase)

@@ -45,9 +45,9 @@ namespace CacheExample.Configuration
             var configOptions = new Lazy<ConfigurationOptions>(new ConfigurationOptions
             {
                 ClientName = string.IsNullOrEmpty(clientName) ? Path.GetFileName(Process.GetCurrentProcess().MainModule.FileName) : clientName,
+                ConnectRetry = 5,
                 ConnectTimeout = connectTimeout,
                 SyncTimeout = syncTimeout,
-                ConnectRetry = 5,
                 ReconnectRetryPolicy = new ExponentialRetry(100, 500),
                 AbortOnConnectFail = false,
                 Password = configuration["RedisCache:Options:Password"]

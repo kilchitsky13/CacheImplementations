@@ -29,6 +29,7 @@ namespace CacheExample.Services
             }
         }
 
+
         public async Task<ICacheResult<TModel>> Get(Func<string, Task<TModel>> func, string parameter)
         {
             var key = func.GetBodyHashCode(parameter);
@@ -85,8 +86,6 @@ namespace CacheExample.Services
                     _redisCacheManager.TryAdd(key, model);
             }
         }
-
-
         
         #endregion
     }

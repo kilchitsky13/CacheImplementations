@@ -30,9 +30,12 @@ namespace CacheExample
             var tests = new CacheTests();
             var memoryCache = new MemoryCache(new MemoryCacheOptions());
 
-            //tests.ReadWriteIntoCache(config);
-            //tests.ReadWriteIntoInMemoryCache(memoryCache, config);
-            tests.ReadWriteIntoDistributedCache(config);
+
+            Task.WhenAll( 
+                Task.Run(() => tests.ReadWriteIntoDistributedCache(config)),
+                Task.Run(() => tests.ReadWriteIntoCache(config)),
+                Task.Run(() => tests.ReadWriteIntoInMemoryCache(memoryCache, config))
+                );
             
             Console.ReadKey();
         }
@@ -85,14 +88,14 @@ namespace CacheExample
         
         #region Private
 
-        public void RunTest(ICacheManager<string, UserForCaching> cacheService)
+        public async void RunTest(ICacheManager<string, UserForCaching> cacheService)
         {
             var prefix = cacheService.GetType().Name;
 
             var model = CachingModelsFactory.CreateFakeUser();
             model.Id = $"{prefix}.{model.Id}";
 
-            Task.Run(() => ReadWriteIntoFromCache(cacheService, model));
+            await Task.Run(() => ReadWriteIntoFromCache(cacheService, model));
         }
 
         private void ReadWriteIntoFromCache(ICacheManager<string, UserForCaching> cacheService, UserForCaching model)

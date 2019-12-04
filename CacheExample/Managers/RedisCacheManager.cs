@@ -85,8 +85,7 @@ namespace CacheExample.Managers
                 return new CacheResult(e);
             }
         }
-
-
+        
         public void Dispose()
         {
             _connectionMultiplexer?.Dispose();

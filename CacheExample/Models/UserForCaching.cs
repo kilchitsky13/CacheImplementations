@@ -1,13 +1,14 @@
 ﻿using System;
+using CacheExample.Interfaces;
 
 namespace CacheExample.Models
 {
-    public class UserForCaching
+    public class UserForCaching : ModelWithId<string>
     {
-        public string Id;
-        public string FirstName;
-        public string LastName;
-        public DateTime DateOfBirth;
-        public string City;
+        public string Id { get; set; }
+        public string FirstName { get; set; }
+        public string LastName { get; set; }
+        public DateTime DateOfBirth { get; set; }
+        public string City { get; set; }
     }
 }
